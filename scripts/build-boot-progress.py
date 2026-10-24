@@ -8,8 +8,30 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'build/boot-progress'
 OUT.mkdir(parents=True, exist_ok=True)
+
+# The upstream sheng tree keeps these sources in kits/sheng, while the NX721J
+# device package keeps its board-owned sources in package/.  Select the layout
+# that is actually present instead of importing another board's files.
+source_names = (
+    'BootProgress.c',
+    'BootFaultProbe.c',
+    'BootWatchdogPolicy.c',
+    'BootProgressLifecycle.h',
+    'BootProgressCore.h',
+    'BootProgressDisplay.h',
+    'BootProgressPulse.h',
+)
+source_root = next(
+    (candidate for candidate in (ROOT / 'package', ROOT / 'kits/sheng')
+     if all((candidate / name).is_file() for name in source_names)),
+    None,
+)
+if source_root is None:
+    locations = ', '.join(str(ROOT / relative) for relative in ('package', 'kits/sheng'))
+    raise SystemExit(f'boot-progress source set not found in: {locations}')
+
 record = json.loads((ROOT / 'build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/osfmk/DEVELOPMENT/startup.o.json').read_text().strip().rstrip(','))
-source = ROOT / 'kits/sheng/BootProgress.c'
+source = source_root / 'BootProgress.c'
 obj = OUT / 'BootProgress.o'
 command = []
 args = record['arguments']
@@ -34,11 +56,11 @@ command += ['-DXNU_BOOT_PROGRESS=1', '-mgeneral-regs-only', '-Wall', '-Wextra', 
             '-I', str(ROOT / 'uefi-sheng/Silicon/Silicium/SiliciumPkg/Library/FrameBufferSerialPortLib')]
 subprocess.run(command, cwd=record['directory'], check=True, timeout=90)
 (OUT / 'compile-command.json').write_text(json.dumps(command,indent=2)+'\n')
-fault_source = ROOT / 'kits/sheng/BootFaultProbe.c'
+fault_source = source_root / 'BootFaultProbe.c'
 fault_obj = OUT / 'BootFaultProbe.o'
 fault_command = [str(fault_source) if arg == str(source) else str(fault_obj) if arg == str(obj) else arg for arg in command]
 subprocess.run(fault_command, cwd=record['directory'], check=True, timeout=90)
-policy_source = ROOT / 'kits/sheng/BootWatchdogPolicy.c'
+policy_source = source_root / 'BootWatchdogPolicy.c'
 policy_obj = OUT / 'BootWatchdogPolicy.o'
 policy_record = json.loads((ROOT / 'build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/bsd/DEVELOPMENT/kern_exec.o.json').read_text().strip().rstrip(','))
 policy_command = []

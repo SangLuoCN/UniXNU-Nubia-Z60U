@@ -20,6 +20,7 @@ source_names = (
     'BootProgressCore.h',
     'BootProgressDisplay.h',
     'BootProgressPulse.h',
+    'Font.h',
 )
 candidate_roots = [ROOT / 'package']
 kits_root = ROOT / 'kits'
@@ -96,6 +97,7 @@ subprocess.run(['xcrun', 'ar', 'rcs', str(archive), str(obj), str(fault_obj), st
     'core_sha256': hashlib.sha256((source.parent / 'BootProgressCore.h').read_bytes()).hexdigest(),
     'display_sha256': hashlib.sha256((source.parent / 'BootProgressDisplay.h').read_bytes()).hexdigest(),
     'pulse_sha256': hashlib.sha256((source.parent / 'BootProgressPulse.h').read_bytes()).hexdigest(),
+    'font_sha256': hashlib.sha256((source.parent / 'Font.h').read_bytes()).hexdigest(),
     'archive_sha256': hashlib.sha256(archive.read_bytes()).hexdigest(),
     'hardware_execution': False,
 }, indent=2) + '\n')

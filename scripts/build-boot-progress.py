@@ -9,9 +9,9 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'build/boot-progress'
 OUT.mkdir(parents=True, exist_ok=True)
 
-# The upstream sheng tree keeps these sources in kits/sheng, while the NX721J
-# device package keeps its board-owned sources in package/.  Select the layout
-# that is actually present instead of importing another board's files.
+# The source checkout keeps board-owned files in package/, while the official
+# build tree stages that package as kits/<board.kit>.  Discover the complete
+# source set in either layout, without importing another board's files.
 source_names = (
     'BootProgress.c',
     'BootFaultProbe.c',
@@ -21,13 +21,17 @@ source_names = (
     'BootProgressDisplay.h',
     'BootProgressPulse.h',
 )
+candidate_roots = [ROOT / 'package']
+kits_root = ROOT / 'kits'
+if kits_root.is_dir():
+    candidate_roots.extend(sorted(path for path in kits_root.iterdir() if path.is_dir()))
 source_root = next(
-    (candidate for candidate in (ROOT / 'package', ROOT / 'kits/sheng')
+    (candidate for candidate in candidate_roots
      if all((candidate / name).is_file() for name in source_names)),
     None,
 )
 if source_root is None:
-    locations = ', '.join(str(ROOT / relative) for relative in ('package', 'kits/sheng'))
+    locations = ', '.join(str(path) for path in candidate_roots)
     raise SystemExit(f'boot-progress source set not found in: {locations}')
 
 record = json.loads((ROOT / 'build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/osfmk/DEVELOPMENT/startup.o.json').read_text().strip().rstrip(','))

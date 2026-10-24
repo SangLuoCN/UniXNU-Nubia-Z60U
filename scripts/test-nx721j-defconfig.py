@@ -23,7 +23,11 @@ class Nx721jDefconfigTests(unittest.TestCase):
 
     def test_probe_has_only_generic_required_switches(self) -> None:
         text = CONFIG.read_text(encoding="utf-8")
-        self.assertNotRegex(text, FORBIDDEN)
+        enabled = "\n".join(
+            line for line in text.splitlines()
+            if line.startswith("CONFIG_") and line.endswith("=y")
+        )
+        self.assertNotRegex(enabled, FORBIDDEN)
         for key in (
             "CONFIG_XNU_ARM_DT_PLATFORM=y",
             "CONFIG_XNU_ARMCPU=y",

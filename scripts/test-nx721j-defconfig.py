@@ -52,6 +52,8 @@ class Nx721jDefconfigTests(unittest.TestCase):
     def test_ufs_builder_uses_passive_split_without_sheng_verification(self) -> None:
         builder = DRIVER_BUILDER.read_text(encoding="utf-8")
         self.assertIn("if component == 'NativeUfs':", builder)
+        self.assertIn("str(ROOT / 'drivers/NativeUfs')", builder)
+        self.assertIn("'-DNATIVE_UFS_PASSIVE_ONLY=1'", builder)
         self.assertNotIn("-DNATIVE_VERIFIED_BLOCK=1', '-DNATIVE_VERIFIED_BLOCK_MULTI_POLICY=1", builder)
 
 

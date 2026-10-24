@@ -115,7 +115,10 @@ if component in ('NativeVirtioBlock', 'NativeRamBlock', 'NativeUfs'):
 if component == 'NativeUfs':
     # The verified-root and boot-progress flags belong to the qualified sheng
     # transport and would import its policy ABI into this board.
-    command += ['-DNATIVE_UFS_PASSIVE_ONLY=1', '-mgeneral-regs-only']
+    # The passive source is generated under build/native-ufs, but its includes
+    # remain the official NativeUfs module headers in drivers/NativeUfs.
+    command += ['-I', str(ROOT / 'drivers/NativeUfs'),
+                '-DNATIVE_UFS_PASSIVE_ONLY=1', '-mgeneral-regs-only']
 if component=='NativeOfflineGPU':
     command += ['-I',str(ROOT/'drivers/NativeVirtioConsole')]
 if component in ('NativeLegacyDisplay','NativeHidInput'):

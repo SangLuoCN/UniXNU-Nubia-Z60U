@@ -1,7 +1,9 @@
 # Minimal NX721J probe configuration.
 # This file is selected by the NX721J kernel-only board baseline.
-# It enables only the generic XNU/DT/timer/UFS probe boundary; root, GPU, touch,
-# panel, power and board-specific transport remain disabled until qualified.
+# It enables only the generic XNU/DT/timer/UFS probe boundary; root, Virtio,
+# owner-root audit, GPU, touch, panel, power and board-specific transport remain
+# disabled until qualified. Boot progress is deferred because the official
+# implementation requires that complete storage/audit chain.
 
 CONFIG_XNU_BUILD_ARCHIVES=y
 CONFIG_XNU_SOURCE_CORECRYPTO14=y
@@ -11,7 +13,9 @@ CONFIG_XNU_ARM_DT_PLATFORM=y
 CONFIG_XNU_ARMCPU=y
 CONFIG_XNU_NATIVE_ARCH_TIMER=y
 CONFIG_XNU_NATIVE_UFS=y
-CONFIG_XNU_BOOT_PROGRESS=y
+CONFIG_XNU_NATIVE_VIRTIO_BLOCK=n
+CONFIG_XNU_OWNER_ROOT_AUDIT=n
+CONFIG_XNU_BOOT_PROGRESS=n
 
 CONFIG_XNU_NATIVE_MOBILE_DISPLAY=n
 CONFIG_XNU_NATIVE_LEGACY_DISPLAY=n

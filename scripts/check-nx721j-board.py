@@ -49,7 +49,6 @@ def main() -> int:
         "build-arm-driver.py ArmDTPlatform",
         "build-arm-driver.py ArmCpu",
         "build-arm-driver.py NativeUfs",
-        "build-boot-progress.py",
         "build-libpthread-kernel.py",
     }
     if not required.issubset(archives):

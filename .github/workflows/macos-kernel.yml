@@ -1,6 +1,9 @@
 name: NX721J macOS kernel build
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       unixnu_repository:
@@ -38,8 +41,8 @@ jobs:
       - name: Checkout official UniXNU
         uses: actions/checkout@v4
         with:
-          repository: ${{ inputs.unixnu_repository }}
-          ref: ${{ inputs.unixnu_ref }}
+          repository: ${{ inputs.unixnu_repository || 'UniXNU/UniXNU' }}
+          ref: ${{ inputs.unixnu_ref || 'main' }}
           path: unixnu
           submodules: recursive
           token: ${{ secrets.UNIXNU_DEVICE_TOKEN || github.token }}

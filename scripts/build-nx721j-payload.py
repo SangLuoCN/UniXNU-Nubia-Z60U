@@ -114,11 +114,29 @@ def validate_optional(path: Path | None, label: str) -> Path | None:
 
 
 def validate_arguments(arguments: list[str]) -> str:
+    ufs_target: list[str] = []
+    ufs_probe: list[str] = []
     for argument in arguments:
         if not ARGUMENT_RE.fullmatch(argument):
             fail(f"unsupported kernel argument: {argument}")
         if FORBIDDEN_IDENTITY.search(argument):
             fail(f"kernel argument contains a non-NX721J identity: {argument}")
+        key, separator, value = argument.partition("=")
+        if separator and key == "native-ufs-target":
+            ufs_target.append(value)
+        elif separator and key == "native-ufs-probe":
+            ufs_probe.append(value)
+
+    if any(value != "nx721j" for value in ufs_target):
+        fail("native-ufs-target must be nx721j for an NX721J payload")
+    if any(argument.startswith("native-ufs-root=") for argument in arguments):
+        fail("native-ufs-root is not qualified on NX721J; use passive native-ufs-probe=2")
+    if ufs_probe:
+        if ufs_target != ["nx721j"]:
+            fail("native-ufs-probe requires native-ufs-target=nx721j")
+        if ufs_probe != ["2"]:
+            fail("NX721J currently permits only native-ufs-probe=2")
+
     line = " ".join(arguments)
     if len(line) > 1000:
         fail(f"kernel command line is {len(line)} bytes; DarwinBoot accepts at most 1000")

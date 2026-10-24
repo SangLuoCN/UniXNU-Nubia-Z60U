@@ -11,6 +11,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "configs" / "nx721j_probe_defconfig"
 DRIVER_BUILDER = ROOT / "scripts" / "build-arm-driver.py"
+WORKFLOW = ROOT / ".github" / "workflows" / "macos-kernel.yml"
 FORBIDDEN = re.compile(r"(?:SHENG|SWEET|ACE5|GIULIA|SM8550|NOVATEK|ADRENO)", re.IGNORECASE)
 
 
@@ -55,6 +56,10 @@ class Nx721jDefconfigTests(unittest.TestCase):
         self.assertIn("str(ROOT / 'drivers/NativeUfs')", builder)
         self.assertIn("'-DNATIVE_UFS_PASSIVE_ONLY=1'", builder)
         self.assertNotIn("-DNATIVE_VERIFIED_BLOCK=1', '-DNATIVE_VERIFIED_BLOCK_MULTI_POLICY=1", builder)
+
+    def test_workflow_applies_the_pinned_native_ufs_delta(self) -> None:
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("prepare-nx721j-native-ufs.py --unixnu", workflow)
 
 
 if __name__ == "__main__":

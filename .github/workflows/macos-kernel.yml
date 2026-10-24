@@ -52,6 +52,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Apply NX721J NativeUfs profile
+        run: python3 scripts/prepare-nx721j-native-ufs.py --unixnu "$GITHUB_WORKSPACE/unixnu"
+
       - name: Install host tools
         run: |
           brew install cmake ninja unifdef llvm mtools dtc
@@ -68,7 +71,8 @@ jobs:
             scripts/test-nx721j-defconfig.py \
             scripts/test-nx721j-payload-validation.py \
             scripts/build-nx721j-payload.py \
-            scripts/build-nx721j-kernel-stubs.py
+            scripts/build-nx721j-kernel-stubs.py \
+            scripts/prepare-nx721j-native-ufs.py
 
       - name: Report the Apple toolchain
         run: |

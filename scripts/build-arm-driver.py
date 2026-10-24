@@ -35,6 +35,44 @@ if args.verified_root:
     if args.verified_root_bundle:
         out = ROOT / 'build/native-virtio-block-verified-bundle'
 out.mkdir(parents=True, exist_ok=True)
+if component == 'NativeUfs':
+    # The official NativeUfs source also contains the sheng root-window
+    # publisher. NX721J is passive-only at this stage, so keep the official
+    # probe code but omit the unqualified IOBlockStorageDevice personality.
+    text = source.read_text()
+    marker = '// One read-only window of the root image as a block device:'
+    if text.count(marker) != 1:
+        raise SystemExit('NativeUfs source layout changed; passive split is unsafe')
+    prefix, suffix = text.split(marker, 1)
+    source = out / 'Nx721jPassiveUfs.cpp'
+    source.write_text(prefix + '''
+#if defined(NATIVE_UFS_PASSIVE_ONLY) && NATIVE_UFS_PASSIVE_ONLY
+static void rootDiagnosticFailure (const char *) {}
+
+bool NativeUfs::start (IOService *provider)
+{
+  unsigned probe = 0, rootMode = 0;
+  PE_parse_boot_argn ("native-ufs-probe", &probe, sizeof (probe));
+  PE_parse_boot_argn ("native-ufs-root", &rootMode, sizeof (rootMode));
+  native_ufs_probe_requested = probe != 0;
+  if (!nx721jRequested () || rootMode || probe != 2 ||
+      !OSDynamicCast (IOPlatformExpertDevice, provider)) {
+    return false;
+  }
+  inspect ();
+  return true;
+}
+
+void NativeUfs::stop (IOService *provider)
+{
+  fCmdDesc.reset ();
+  fMap.reset ();
+  IOService::stop (provider);
+}
+#else
+''' + marker + suffix + '''
+#endif
+''')
 if args.negative_aes_kat:
     if component != 'NativeAES':
         parser.error('The own-source KAT control requires NativeAES')
@@ -75,8 +113,9 @@ if component in ('NativeVirtioBlock', 'NativeRamBlock', 'NativeUfs'):
     if args.verified_root_bundle:
         command += ['-DNATIVE_VERIFIED_BLOCK_MULTI_POLICY=1']
 if component == 'NativeUfs':
-    command += ['-I', str(ROOT / 'kits/VerifiedRoot/include'), '-I', str(ROOT / 'drivers/NativeVirtioBlock'),
-                '-DNATIVE_VERIFIED_BLOCK=1', '-DNATIVE_VERIFIED_BLOCK_MULTI_POLICY=1', '-mgeneral-regs-only']
+    # The verified-root and boot-progress flags belong to the qualified sheng
+    # transport and would import its policy ABI into this board.
+    command += ['-DNATIVE_UFS_PASSIVE_ONLY=1', '-mgeneral-regs-only']
 if component=='NativeOfflineGPU':
     command += ['-I',str(ROOT/'drivers/NativeVirtioConsole')]
 if component in ('NativeLegacyDisplay','NativeHidInput'):

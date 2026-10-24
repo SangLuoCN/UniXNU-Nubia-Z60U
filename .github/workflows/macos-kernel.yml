@@ -67,7 +67,8 @@ jobs:
             scripts/check-nx721j-board.py \
             scripts/test-nx721j-defconfig.py \
             scripts/test-nx721j-payload-validation.py \
-            scripts/build-nx721j-payload.py
+            scripts/build-nx721j-payload.py \
+            scripts/build-nx721j-kernel-stubs.py
 
       - name: Report the Apple toolchain
         run: |

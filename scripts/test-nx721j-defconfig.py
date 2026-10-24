@@ -29,6 +29,10 @@ class Nx721jDefconfigTests(unittest.TestCase):
         )
         self.assertNotRegex(enabled, FORBIDDEN)
         for key in (
+            "CONFIG_XNU_BUILD_ARCHIVES=y",
+            "CONFIG_XNU_SOURCE_CORECRYPTO14=y",
+            "CONFIG_XNU_SOURCE_PTHREAD=y",
+            "CONFIG_XNU_NATIVE_PAN=y",
             "CONFIG_XNU_ARM_DT_PLATFORM=y",
             "CONFIG_XNU_ARMCPU=y",
             "CONFIG_XNU_NATIVE_ARCH_TIMER=y",

@@ -1,8 +1,12 @@
 # Minimal NX721J probe configuration.
-# This file is intentionally not selected by the current sheng-derived board.toml.
+# This file is selected by the NX721J kernel-only board baseline.
 # It enables only the generic XNU/DT/timer/UFS probe boundary; root, GPU, touch,
 # panel, power and board-specific transport remain disabled until qualified.
 
+CONFIG_XNU_BUILD_ARCHIVES=y
+CONFIG_XNU_SOURCE_CORECRYPTO14=y
+CONFIG_XNU_SOURCE_PTHREAD=y
+CONFIG_XNU_NATIVE_PAN=y
 CONFIG_XNU_ARM_DT_PLATFORM=y
 CONFIG_XNU_ARMCPU=y
 CONFIG_XNU_NATIVE_ARCH_TIMER=y

@@ -1,0 +1,105 @@
+name: NX721J macOS kernel build
+
+on:
+  workflow_dispatch:
+    inputs:
+      unixnu_repository:
+        description: UniXNU repository as owner/name
+        required: true
+        default: UniXNU/UniXNU
+      unixnu_ref:
+        description: UniXNU branch, tag or commit
+        required: true
+        default: main
+      ipsw_url:
+        description: Optional IPSW URL override; empty uses board.toml
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nx721j-kernel-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HOMEBREW_NO_AUTO_UPDATE: 1
+  HOMEBREW_NO_INSTALL_CLEANUP: 1
+
+jobs:
+  kernel:
+    runs-on: macos-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout NX721J device repository
+        uses: actions/checkout@v4
+
+      - name: Checkout official UniXNU
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.unixnu_repository }}
+          ref: ${{ inputs.unixnu_ref }}
+          path: unixnu
+          submodules: recursive
+          token: ${{ secrets.UNIXNU_DEVICE_TOKEN || github.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install host tools
+        run: |
+          brew install cmake ninja unifdef llvm mtools dtc
+          echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
+          echo "$(brew --prefix unifdef)/bin" >> "$GITHUB_PATH"
+
+      - name: Verify the device boundary
+        run: |
+          python3 scripts/test-nx721j-defconfig.py
+          python3 scripts/check-nx721j-board.py
+          python3 scripts/test-nx721j-payload-validation.py
+          python3 -m py_compile scripts/*.py
+
+      - name: Report the Apple toolchain
+        run: |
+          sw_vers
+          uname -m
+          xcodebuild -version
+          xcode-select -p
+
+      - name: Select defconfig
+        working-directory: unixnu
+        run: ./unixnu defconfig nx721j_probe_defconfig -D "$GITHUB_WORKSPACE"
+
+      - name: Fetch kernel inputs
+        working-directory: unixnu
+        run: |
+          ./unixnu fetch xnu libplatform libdispatch AvailabilityVersions libpthread \
+            corecrypto-2023 IOStorageFamily -D "$GITHUB_WORKSPACE"
+
+      - name: Build kernel
+        working-directory: unixnu
+        env:
+          IPSW_URL: ${{ inputs.ipsw_url }}
+        run: |
+          args=()
+          if [ -n "$IPSW_URL" ]; then args+=(--ipsw "$IPSW_URL"); fi
+          ./unixnu build kernel "${args[@]}" -D "$GITHUB_WORKSPACE"
+
+      - name: Upload kernel output and logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: nx721j-kernel-${{ github.run_number }}
+          path: |
+            unixnu/out/*/kernel/**
+            unixnu/out/*/logs/**
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Remove proprietary inputs
+        if: always()
+        run: |
+          rm -rf unixnu/out/ipsw unixnu/out/feeds
+          rm -rf out/.cache/firmware unixnu/out/*/tree/.cache/firmware

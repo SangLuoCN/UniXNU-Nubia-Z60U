@@ -55,6 +55,7 @@ class Nx721jDefconfigTests(unittest.TestCase):
         self.assertIn("if component == 'NativeUfs':", builder)
         self.assertIn("str(ROOT / 'drivers/NativeUfs')", builder)
         self.assertIn("'-DNATIVE_UFS_PASSIVE_ONLY=1'", builder)
+        self.assertIn("'-Wno-unused-function', '-Wno-unneeded-internal-declaration'", builder)
         self.assertNotIn("-DNATIVE_VERIFIED_BLOCK=1', '-DNATIVE_VERIFIED_BLOCK_MULTI_POLICY=1", builder)
 
     def test_workflow_applies_the_pinned_native_ufs_delta(self) -> None:

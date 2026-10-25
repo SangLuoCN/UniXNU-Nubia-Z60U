@@ -118,7 +118,11 @@ if component == 'NativeUfs':
     # The passive source is generated under build/native-ufs, but its includes
     # remain the official NativeUfs module headers in drivers/NativeUfs.
     command += ['-I', str(ROOT / 'drivers/NativeUfs'),
-                '-DNATIVE_UFS_PASSIVE_ONLY=1', '-mgeneral-regs-only']
+                '-DNATIVE_UFS_PASSIVE_ONLY=1', '-mgeneral-regs-only',
+                # The source split retains official sheng transport helpers
+                # for provenance, but NX721J passive mode intentionally does
+                # not reference those static functions.
+                '-Wno-unused-function', '-Wno-unneeded-internal-declaration']
 if component=='NativeOfflineGPU':
     command += ['-I',str(ROOT/'drivers/NativeVirtioConsole')]
 if component in ('NativeLegacyDisplay','NativeHidInput'):

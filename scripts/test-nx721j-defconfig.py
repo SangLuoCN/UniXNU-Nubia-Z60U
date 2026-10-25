@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "configs" / "nx721j_probe_defconfig"
 DRIVER_BUILDER = ROOT / "scripts" / "build-arm-driver.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "macos-kernel.yml"
+PINNED_UNIXNU = "d1559e69a1c181e68ecfe70a721bc0a436caf2e7"
 FORBIDDEN = re.compile(r"(?:SHENG|SWEET|ACE5|GIULIA|SM8550|NOVATEK|ADRENO)", re.IGNORECASE)
 
 
@@ -61,6 +62,8 @@ class Nx721jDefconfigTests(unittest.TestCase):
     def test_workflow_applies_the_pinned_native_ufs_delta(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("prepare-nx721j-native-ufs.py --unixnu", workflow)
+        self.assertGreaterEqual(workflow.count(PINNED_UNIXNU), 2)
+        self.assertNotIn("unixnu_ref || 'main'", workflow)
 
 
 if __name__ == "__main__":

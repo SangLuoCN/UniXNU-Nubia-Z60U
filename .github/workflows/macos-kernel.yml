@@ -11,9 +11,9 @@ on:
         required: true
         default: UniXNU/UniXNU
       unixnu_ref:
-        description: UniXNU branch, tag or commit
+        description: UniXNU commit (default is the tested NativeUfs-compatible snapshot)
         required: true
-        default: main
+        default: d1559e69a1c181e68ecfe70a721bc0a436caf2e7
       ipsw_url:
         description: Optional IPSW URL override; empty uses board.toml
         required: false
@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.unixnu_repository || 'UniXNU/UniXNU' }}
-          ref: ${{ inputs.unixnu_ref || 'main' }}
+          ref: ${{ inputs.unixnu_ref || 'd1559e69a1c181e68ecfe70a721bc0a436caf2e7' }}
           path: unixnu
           submodules: recursive
           token: ${{ secrets.UNIXNU_DEVICE_TOKEN || github.token }}

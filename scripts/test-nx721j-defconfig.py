@@ -3,17 +3,24 @@
 
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 import re
+import tempfile
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "configs" / "nx721j_probe_defconfig"
 DRIVER_BUILDER = ROOT / "scripts" / "build-arm-driver.py"
+STUB_BUILDER = ROOT / "scripts" / "build-nx721j-kernel-stubs.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "macos-kernel.yml"
 PINNED_UNIXNU = "d1559e69a1c181e68ecfe70a721bc0a436caf2e7"
 FORBIDDEN = re.compile(r"(?:SHENG|SWEET|ACE5|GIULIA|SM8550|NOVATEK|ADRENO)", re.IGNORECASE)
+
+SPEC = importlib.util.spec_from_file_location("nx721j_kernel_stubs", STUB_BUILDER)
+STUB_MODULE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(STUB_MODULE)
 
 
 class Nx721jDefconfigTests(unittest.TestCase):
@@ -58,6 +65,21 @@ class Nx721jDefconfigTests(unittest.TestCase):
         self.assertIn("'-DNATIVE_UFS_PASSIVE_ONLY=1'", builder)
         self.assertIn("'-Wno-unused-function', '-Wno-unneeded-internal-declaration'", builder)
         self.assertNotIn("-DNATIVE_VERIFIED_BLOCK=1', '-DNATIVE_VERIFIED_BLOCK_MULTI_POLICY=1", builder)
+
+    def test_kernel_stub_builder_resolves_local_and_staged_package_layouts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            local_source = root / "package" / "Nx721jKernelStubs.c"
+            local_source.parent.mkdir()
+            local_source.touch()
+            self.assertEqual(STUB_MODULE.resolve_source(root), local_source)
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            staged_source = root / "kits" / "nx721j" / "Nx721jKernelStubs.c"
+            staged_source.parent.mkdir(parents=True)
+            staged_source.touch()
+            self.assertEqual(STUB_MODULE.resolve_source(root), staged_source)
 
     def test_workflow_applies_the_pinned_native_ufs_delta(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")

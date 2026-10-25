@@ -1,0 +1,97 @@
+name: NX721J passive UFS payload
+
+on:
+  workflow_dispatch:
+    inputs:
+      kernel_run_id:
+        description: Successful NX721J kernel workflow run ID
+        required: true
+        default: "40170533131"
+      kernel_artifact_name:
+        description: Kernel artifact name from that run
+        required: true
+        default: nx721j-kernel-14
+      dram_base:
+        description: First verified contiguous DRAM bank base
+        required: true
+        default: "0x80000000"
+      dram_size:
+        description: First verified contiguous DRAM bank size
+        required: true
+        default: "0x80000000"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  payload:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout NX721J device repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install payload tools
+        run: brew install mtools
+
+      - name: Download successful kernel artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KERNEL_RUN_ID: ${{ inputs.kernel_run_id }}
+          KERNEL_ARTIFACT_NAME: ${{ inputs.kernel_artifact_name }}
+        run: |
+          mkdir -p input/kernel
+          gh run download "$KERNEL_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "$KERNEL_ARTIFACT_NAME" \
+            --dir input/kernel
+          KERNEL_PATH="$(find input/kernel -type f -name kernel.macho -print -quit)"
+          test -n "$KERNEL_PATH"
+          printf 'KERNEL_PATH=%s\n' "$KERNEL_PATH" >> "$GITHUB_ENV"
+
+      - name: Verify artifact and generate NX721J ADT
+        env:
+          DRAM_BASE: ${{ inputs.dram_base }}
+          DRAM_SIZE: ${{ inputs.dram_size }}
+        run: |
+          python3 scripts/test-nx721j-payload-validation.py
+          python3 -m py_compile \
+            scripts/make-nx721j-adt.py \
+            scripts/build-nx721j-payload.py
+          mkdir -p out/nx721j
+          python3 scripts/make-nx721j-adt.py \
+            --output out/nx721j/kernel.macho.adt \
+            --report out/nx721j/adt.json \
+            --dram-base "$DRAM_BASE" \
+            --dram-size "$DRAM_SIZE" \
+            --arm-io-base 0x1000000 \
+            --arm-io-size 0x20000000 \
+            --cpu-regs 0 \
+            --psci-method smc
+
+      - name: Build passive NX721J payload
+        run: |
+          python3 scripts/build-nx721j-payload.py \
+            --kernel "$KERNEL_PATH" \
+            --adt out/nx721j/kernel.macho.adt \
+            --output out/nx721j/nx721j-passive-ufs.img \
+            --kernel-arg native-ufs-target=nx721j \
+            --kernel-arg native-ufs-probe=2 \
+            --title "Boot NX721J UFS probe" \
+            --timeout 3 \
+            --size-mib 192 \
+            --volume-label NX721J
+
+      - name: Upload payload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nx721j-passive-payload-${{ github.run_number }}
+          path: out/nx721j/**
+          if-no-files-found: error
+          retention-days: 7

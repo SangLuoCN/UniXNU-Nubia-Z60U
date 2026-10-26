@@ -37,8 +37,11 @@ jobs:
 
       - name: Install payload and probe tools
         run: |
-          brew install mtools llvm
+          brew install mtools llvm lld
           echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
+          echo "$(brew --prefix lld)/bin" >> "$GITHUB_PATH"
+          test -x "$(brew --prefix lld)/bin/ld.lld"
+          "$(brew --prefix lld)/bin/ld.lld" --version
 
       - name: Download successful kernel artifact
         env:

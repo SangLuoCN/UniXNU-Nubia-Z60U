@@ -21,6 +21,11 @@ SPEC = importlib.util.spec_from_file_location("nx721j_kernel_stubs", STUB_BUILDE
 STUB_MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(STUB_MODULE)
 
+PATCHER = ROOT / "scripts" / "patch-xnu-entry-probe.py"
+PATCHER_SPEC = importlib.util.spec_from_file_location("nx721j_entry_probe", PATCHER)
+PATCHER_MODULE = importlib.util.module_from_spec(PATCHER_SPEC)
+PATCHER_SPEC.loader.exec_module(PATCHER_MODULE)
+
 
 class Nx721jDefconfigTests(unittest.TestCase):
     def test_file_is_present_and_well_formed(self) -> None:
@@ -78,6 +83,19 @@ class Nx721jDefconfigTests(unittest.TestCase):
             staged_source.parent.mkdir(parents=True)
             staged_source.touch()
             self.assertEqual(STUB_MODULE.resolve_source(root), staged_source)
+
+    def test_panic_screen_font_resolves_uefi_source_or_bundled_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundled = root / "package"
+            bundled.mkdir()
+            (bundled / "Font.h").touch()
+            self.assertEqual(PATCHER_MODULE.resolve_font_dir(root), bundled)
+
+            uefi_font = root / "uefi" / "Silicon/Silicium/SiliciumPkg/Library/FrameBufferSerialPortLib"
+            uefi_font.mkdir(parents=True)
+            (uefi_font / "Font.h").touch()
+            self.assertEqual(PATCHER_MODULE.resolve_font_dir(root, root / "uefi"), uefi_font)
 
     def test_workflow_uses_pinned_official_xnu_without_native_ufs_mutation(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")

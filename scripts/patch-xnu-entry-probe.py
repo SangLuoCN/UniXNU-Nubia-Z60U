@@ -179,8 +179,7 @@ def assemble_c(source, va, workdir, symbols):
     lld = shutil.which('ld.lld') or '/opt/homebrew/opt/llvm/bin/ld.lld'
     objcopy = shutil.which('llvm-objcopy') or '/opt/homebrew/opt/llvm/bin/llvm-objcopy'
     nm = shutil.which('llvm-nm') or '/opt/homebrew/opt/llvm/bin/llvm-nm'
-    # UNIXNU_UEFI is the Mu-Silicium checkout when the unixnu driver runs this script.
-    font_dir = Path(os.environ.get('UNIXNU_UEFI') or ROOT / 'uefi-sheng') / 'Silicon/Silicium/SiliciumPkg/Library/FrameBufferSerialPortLib'
+    font_dir = resolve_font_dir(ROOT, os.environ.get('UNIXNU_UEFI'))
     obj, elf, binary = (workdir / name for name in ('panic.o', 'panic.elf', 'panic.bin'))
     definitions = []
     for macro, name, width in (('MAX_MEM', '_max_mem', 8),
@@ -227,6 +226,19 @@ def assemble_c(source, va, workdir, symbols):
     if entry != load:
         raise SystemExit(f'panic_screen at {entry:#x} is not the first byte {load:#x}')
     return binary.read_bytes(), load, entry
+
+
+def resolve_font_dir(root, uefi_root=None):
+    relative = Path('Silicon/Silicium/SiliciumPkg/Library/FrameBufferSerialPortLib')
+    candidates = []
+    if uefi_root:
+        candidates.append(Path(uefi_root) / relative)
+    candidates.extend((Path(root) / 'uefi-sheng' / relative, Path(root) / 'package'))
+    for candidate in candidates:
+        if (candidate / 'Font.h').is_file():
+            return candidate
+    checked = ', '.join(str(path) for path in candidates)
+    raise SystemExit(f'Cannot locate Font.h; checked: {checked}')
 
 
 def panic_common_entry(workdir, code, load):

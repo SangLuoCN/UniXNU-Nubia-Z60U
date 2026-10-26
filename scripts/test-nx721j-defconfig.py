@@ -86,12 +86,13 @@ class Nx721jDefconfigTests(unittest.TestCase):
         self.assertNotIn("prepare-nx721j-native-ufs.py", workflow)
         self.assertNotIn("IOStorageFamily", workflow)
 
-    def test_payload_workflow_patches_only_a_copy_and_passes_no_ufs_args(self) -> None:
+    def test_payload_workflow_continues_without_reset_and_passes_no_ufs_args(self) -> None:
         workflow = (ROOT / ".github" / "workflows" / "macos-nx721j-payload.yml").read_text(encoding="utf-8")
         self.assertIn("cp \"$KERNEL_PATH\" out/nx721j/kernel.entry-probe.macho", workflow)
         self.assertIn("scripts/patch-xnu-entry-probe.py", workflow)
-        self.assertIn("--reset-delay 6", workflow)
-        self.assertNotIn("--panic-screen", workflow)
+        self.assertIn("--panic-screen", workflow)
+        self.assertIn("--no-reset", workflow)
+        self.assertNotIn("--reset-delay", workflow)
         self.assertNotIn("native-ufs-target=nx721j", workflow)
         self.assertNotIn("native-ufs-probe=2", workflow)
         self.assertNotIn("native-ufs-root=1", workflow)

@@ -1,4 +1,4 @@
-name: NX721J XNU first-entry diagnostic payload
+name: NX721J XNU continuation diagnostic payload
 
 on:
   workflow_dispatch:
@@ -85,16 +85,17 @@ jobs:
           shasum -a 256 "$KERNEL_PATH" out/nx721j/kernel.entry-probe.macho
           python3 scripts/patch-xnu-entry-probe.py \
             out/nx721j/kernel.entry-probe.macho \
-            --reset-delay 6
+            --panic-screen \
+            --no-reset
           shasum -a 256 "$KERNEL_PATH" out/nx721j/kernel.entry-probe.macho
 
-      - name: Build NX721J first-entry payload without storage arguments
+      - name: Build NX721J continuation payload without storage arguments
         run: |
           python3 scripts/build-nx721j-payload.py \
             --kernel out/nx721j/kernel.entry-probe.macho \
             --adt out/nx721j/kernel.macho.adt \
-            --output out/nx721j/nx721j-xnu-first-entry.img \
-            --title "NX721J XNU entry and MMU diagnostic (no UFS)" \
+            --output out/nx721j/nx721j-xnu-continuation.img \
+            --title "NX721J XNU continuation diagnostic (no UFS)" \
             --timeout 3 \
             --size-mib 192 \
             --volume-label NX721J
@@ -102,7 +103,7 @@ jobs:
       - name: Upload payload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nx721j-xnu-first-entry-${{ github.run_number }}
+          name: nx721j-xnu-continuation-${{ github.run_number }}
           path: out/nx721j/**
           if-no-files-found: error
           retention-days: 7

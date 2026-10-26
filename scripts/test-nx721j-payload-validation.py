@@ -17,6 +17,9 @@ SPEC.loader.exec_module(MODULE)
 
 
 class Nx721jPayloadValidationTests(unittest.TestCase):
+    def test_first_entry_has_no_storage_or_root_arguments(self) -> None:
+        self.assertEqual(MODULE.validate_arguments([]), "")
+
     def assert_rejected(self, arguments: list[str]) -> None:
         with self.assertRaises(SystemExit):
             MODULE.validate_arguments(arguments)

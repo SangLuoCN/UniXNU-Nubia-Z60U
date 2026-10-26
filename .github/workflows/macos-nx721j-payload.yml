@@ -1,16 +1,14 @@
-name: NX721J passive UFS payload
+name: NX721J XNU first-entry diagnostic payload
 
 on:
   workflow_dispatch:
     inputs:
       kernel_run_id:
-        description: Successful NX721J kernel workflow run ID
+        description: Successful NX721J first-entry kernel workflow run ID
         required: true
-        default: "40170533131"
       kernel_artifact_name:
         description: Kernel artifact name from that run
         required: true
-        default: nx721j-kernel-14
       dram_base:
         description: First verified contiguous DRAM bank base
         required: true
@@ -37,8 +35,10 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install payload tools
-        run: brew install mtools
+      - name: Install payload and probe tools
+        run: |
+          brew install mtools llvm
+          echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
 
       - name: Download successful kernel artifact
         env:
@@ -75,15 +75,23 @@ jobs:
             --cpu-regs 0 \
             --psci-method smc
 
-      - name: Build passive NX721J payload
+      - name: Patch an isolated kernel copy with entry diagnostics
+        run: |
+          mkdir -p out/nx721j
+          cp "$KERNEL_PATH" out/nx721j/kernel.entry-probe.macho
+          shasum -a 256 "$KERNEL_PATH" out/nx721j/kernel.entry-probe.macho
+          python3 scripts/patch-xnu-entry-probe.py \
+            out/nx721j/kernel.entry-probe.macho \
+            --reset-delay 6
+          shasum -a 256 "$KERNEL_PATH" out/nx721j/kernel.entry-probe.macho
+
+      - name: Build NX721J first-entry payload without storage arguments
         run: |
           python3 scripts/build-nx721j-payload.py \
-            --kernel "$KERNEL_PATH" \
+            --kernel out/nx721j/kernel.entry-probe.macho \
             --adt out/nx721j/kernel.macho.adt \
-            --output out/nx721j/nx721j-passive-ufs.img \
-            --kernel-arg native-ufs-target=nx721j \
-            --kernel-arg native-ufs-probe=2 \
-            --title "Boot NX721J UFS probe" \
+            --output out/nx721j/nx721j-xnu-first-entry.img \
+            --title "NX721J XNU entry and MMU diagnostic (no UFS)" \
             --timeout 3 \
             --size-mib 192 \
             --volume-label NX721J
@@ -91,7 +99,7 @@ jobs:
       - name: Upload payload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nx721j-passive-payload-${{ github.run_number }}
+          name: nx721j-xnu-first-entry-${{ github.run_number }}
           path: out/nx721j/**
           if-no-files-found: error
           retention-days: 7

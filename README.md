@@ -1,73 +1,38 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="assets/logo-light.svg">
-    <img alt="UniXNU" src="assets/logo-light.svg" width="200">
-  </picture>
-</p>
+# UniXNU-Nubia-Z60U
 
-<p align="center">
-  <a href="https://unixnu.com"><img alt="Documentation" src="https://img.shields.io/badge/docs-unixnu.com-2A5BD7?logo=readthedocs&logoColor=white"></a>
-  <a href="https://t.me/unixnu"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-@unixnu-26A5E4?logo=telegram&logoColor=white"></a>
-  <a href="https://qun.qq.com/universal-share/share?ac=1&authKey=Pubz23DOCY76nxjlGuSms2zesk4jRvas4zrXJRYk7omf7CprXbGQigLEI%2BCoYR8D&busi_data=eyJncm91cENvZGUiOiIxMTI2MTE2NzU5IiwidG9rZW4iOiJwSHJsUDN1UnN2Vi8yM210TjJRbzBIcERmcUpyOS9lb0hHVVpadWdvVFdScVpSYUFLT1YzTk5TWC9mN2xWYmtIIiwidWluIjoiMzE1MTEwOTc0MSJ9&data=_cJgr-jX9yJ2-GXwVjRN5FOhDyk5B-HAfIk5LSunbW_XkkmKqNXbpH33wzP93J0p9DI1fbjgBUrUfTVhwDcxjg&svctype=4&tempid=h5_group_info"><img alt="QQ Group" src="https://img.shields.io/badge/QQ%20Group-join-12B7F5?logo=qq&logoColor=white"></a>
-  <a href="https://x.com/unixnu"><img alt="X" src="https://img.shields.io/badge/X-@unixnu-000000?logo=x&logoColor=white"></a>
-</p>
+NX721J device repository for the ZTE Nubia Z60 Ultra (Qualcomm Pineapple).
+Generic XNU, DarwinBoot, and the UniXNU build system remain in the official UniXNU tree.
 
-# UniXNU-sheng
+- [UniXNU documentation](https://unixnu.com)
+- [Device repository guide](https://unixnu.com/porting/)
+- [Build guide](https://unixnu.com/building)
+- UEFI firmware: [UEFI-Nubia-Z60U](https://github.com/SangLuoCN/UEFI-Nubia-Z60U)
 
-Device repository for the Xiaomi Pad 6S Pro (sheng, SM8550). It holds the board file, kernel defconfig, device scripts, drivers and package.
+## Current stage
 
-🎉 **News:** The native Metal GPU driver is fully working on sheng. The render server composites the system UI through the Adreno 740, and listed processes get their own Metal devices.
+This repository is at XNU first-entry diagnostics. The defconfig enables the generic ARM device-tree platform, CPU, and architectural timer, while disabling NativeUfs, other storage backends, root discovery, and peripheral drivers. A separate payload workflow patches only a copy of the kernel to report progress through XNU entry and the MMU transition.
 
-- [Documentation](https://unixnu.com)
-- [Device page](https://unixnu.com/devices/sheng)
-- [Porting guide](https://unixnu.com/porting/)
-- [Build](https://unixnu.com/building)
+The known UEFI v21 path reaches the UniXNU menu and DarwinBoot kernel handoff. The green DarwinBoot bar does not prove XNU completed initialization. The new diagnostic has not yet been tested on the NX721J; no storage, root filesystem, or iOS userspace boot is claimed.
 
-Firmware: [uefi-sheng](https://github.com/UniXNU/uefi-sheng).
-
-Build with the `unixnu` driver of [UniXNU](https://github.com/UniXNU/UniXNU). Clone both repositories with `--recurse-submodules`; `unixnu fetch` also updates the module submodules.
+The kernel workflow uses the iPad7,1 / iPadOS 17.7.11 kernelcache as the UniXNU/Ace5 prelink ABI reference. It is not an NX721J driver or the target userspace. The iPhone X / iOS 16.7.16 userspace is a separate later-stage input.
 
 ## Build
 
-Run these commands from the UniXNU checkout. The device repository is `../UniXNU-sheng`.
+From the official UniXNU checkout, with this repository alongside it as `../UniXNU-Z60U`:
 
 ```sh
-./unixnu defconfig sheng_defconfig -D ../UniXNU-sheng
-./unixnu fetch
-./unixnu ipsw fetch
-./unixnu build kernel
-./unixnu build package
-./unixnu build firmware --uefi ../uefi-sheng
-./unixnu build payload --unique-chip-id <hex> --trust-cache <bundle> --data-ramdisk <seed>
-./unixnu bootimg --uefi ../uefi-sheng --dtb <sheng.dtb>
+./unixnu defconfig nx721j_probe_defconfig -D ../UniXNU-Z60U
+./unixnu fetch xnu libplatform libdispatch AvailabilityVersions libpthread corecrypto-2023 -D ../UniXNU-Z60U
+./unixnu build kernel -D ../UniXNU-Z60U
 ```
 
-The [device page](https://unixnu.com/devices/sheng#build) adds the userdata image and the Data seed growth commands. The platform seed, trust cache and Data seed are device inputs. Use `--owner-trust-cache <bundle>` for an owner-signed bundle.
+GitHub Actions builds only the kernel. A separate workflow consumes its successful artifact to generate the NX721J ADT and diagnostic FAT payload. Inspect the artifacts before using `fastboot boot`; neither workflow flashes.
 
-Without a Mac, run the kernel and userdata steps in the [macOS runner workflow](https://github.com/UniXNU/UniXNU/actions/workflows/macos.yml). The [build guide](https://unixnu.com/building#macos-runner) lists its inputs.
+## Hardware boundary
 
-## Device support
+NX721J clock, reset, memory, SMMU, DMA, and storage behavior requires NX721J evidence. The sheng NativeUfs implementation and Ace5 Giulia probe are references only; their target-specific transport code and hardware values are not used by this first-entry configuration.
 
-The original iPadOS userland runs from the IPSW; the home screen and Settings are reached. This table records user-facing device support.
-
-| Feature | State | Notes |
-| --- | --- | --- |
-| Touch | ✅ | Novatek NT36532E |
-| Display | ✅ | |
-| UFS | ✅ | Native UFS root |
-| Wi-Fi | ❌ | |
-| Bluetooth | ❌ | |
-| Camera | ❌ | |
-| GPU | ✅ | Native Metal, GPU compositing, per-process devices and exported pipeline caches |
-| USB | ❌ | |
-| Audio | ❌ | |
-| Sensors | ❌ | |
-| Battery driver | ❌ | |
-| MiPPS | ❌ | |
-| Suspend and resume | ❌ | |
-
-✅ available, ⚠️ partial, ❌ not available. The GPU details are in the [Adreno 740 driver](https://unixnu.com/drivers/native-adreno) page.
+No UFS writes, userdata image, GPT changes, or permanent firmware changes are part of this stage. Preserve Android and partition backups; do not use `fastboot flash` for this bring-up stage.
 
 ## License
 

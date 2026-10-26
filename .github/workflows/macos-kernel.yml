@@ -1,9 +1,10 @@
-name: NX721J macOS kernel build
+name: NX721J XNU first-entry kernel
 
 on:
   push:
     branches:
       - main
+      - 'codex/**'
   workflow_dispatch:
     inputs:
       unixnu_repository:
@@ -11,7 +12,7 @@ on:
         required: true
         default: UniXNU/UniXNU
       unixnu_ref:
-        description: UniXNU commit (default is the tested NativeUfs-compatible snapshot)
+        description: UniXNU commit used for the NX721J first-entry baseline
         required: true
         default: d1559e69a1c181e68ecfe70a721bc0a436caf2e7
       ipsw_url:
@@ -52,9 +53,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Apply NX721J NativeUfs profile
-        run: python3 scripts/prepare-nx721j-native-ufs.py --unixnu "$GITHUB_WORKSPACE/unixnu"
-
       - name: Install host tools
         run: |
           brew install cmake ninja unifdef llvm mtools dtc
@@ -71,8 +69,7 @@ jobs:
             scripts/test-nx721j-defconfig.py \
             scripts/test-nx721j-payload-validation.py \
             scripts/build-nx721j-payload.py \
-            scripts/build-nx721j-kernel-stubs.py \
-            scripts/prepare-nx721j-native-ufs.py
+            scripts/build-nx721j-kernel-stubs.py
 
       - name: Report the Apple toolchain
         run: |
@@ -89,7 +86,7 @@ jobs:
         working-directory: unixnu
         run: |
           ./unixnu fetch xnu libplatform libdispatch AvailabilityVersions libpthread \
-            corecrypto-2023 IOStorageFamily -D "$GITHUB_WORKSPACE"
+            corecrypto-2023 -D "$GITHUB_WORKSPACE"
 
       - name: Build kernel
         working-directory: unixnu

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the NX721J UniXNU userdata payload.
+"""Build the NX721J UniXNU diagnostic payload.
 
 The loader is already embedded in the NX721J firmware volume.  This image
 therefore contains only the official UniXNU configuration and the explicit

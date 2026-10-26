@@ -12,7 +12,6 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "configs" / "nx721j_probe_defconfig"
-DRIVER_BUILDER = ROOT / "scripts" / "build-arm-driver.py"
 STUB_BUILDER = ROOT / "scripts" / "build-nx721j-kernel-stubs.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "macos-kernel.yml"
 PINNED_UNIXNU = "d1559e69a1c181e68ecfe70a721bc0a436caf2e7"
@@ -31,7 +30,7 @@ class Nx721jDefconfigTests(unittest.TestCase):
                 continue
             self.assertRegex(line, r"^CONFIG_[A-Z0-9_]+=(?:y|n|[0-9]+|\"[^\"]*\")$", f"line {number}")
 
-    def test_probe_has_only_generic_required_switches(self) -> None:
+    def test_first_entry_has_only_generic_required_switches(self) -> None:
         text = CONFIG.read_text(encoding="utf-8")
         enabled = "\n".join(
             line for line in text.splitlines()
@@ -46,9 +45,10 @@ class Nx721jDefconfigTests(unittest.TestCase):
             "CONFIG_XNU_ARM_DT_PLATFORM=y",
             "CONFIG_XNU_ARMCPU=y",
             "CONFIG_XNU_NATIVE_ARCH_TIMER=y",
-            "CONFIG_XNU_NATIVE_UFS=y",
+            "CONFIG_XNU_NATIVE_UFS=n",
             'CONFIG_XNU_EXTRA_LD_ARCHIVES="{tree}/build/nx721j-kernel-stubs/libNx721jKernelStubs.a"',
             "CONFIG_XNU_NATIVE_VIRTIO_BLOCK=n",
+            "CONFIG_XNU_NATIVE_RAM_BLOCK=n",
             "CONFIG_XNU_OWNER_ROOT_AUDIT=n",
             "CONFIG_XNU_BOOT_PROGRESS=n",
             "CONFIG_XNU_NATIVE_MOBILE_DISPLAY=n",
@@ -58,13 +58,11 @@ class Nx721jDefconfigTests(unittest.TestCase):
         ):
             self.assertIn(key, text)
 
-    def test_ufs_builder_uses_passive_split_without_sheng_verification(self) -> None:
-        builder = DRIVER_BUILDER.read_text(encoding="utf-8")
-        self.assertIn("if component == 'NativeUfs':", builder)
-        self.assertIn("str(ROOT / 'drivers/NativeUfs')", builder)
-        self.assertIn("'-DNATIVE_UFS_PASSIVE_ONLY=1'", builder)
-        self.assertIn("'-Wno-unused-function', '-Wno-unneeded-internal-declaration'", builder)
-        self.assertNotIn("-DNATIVE_VERIFIED_BLOCK=1', '-DNATIVE_VERIFIED_BLOCK_MULTI_POLICY=1", builder)
+    def test_first_entry_does_not_link_native_ufs_archive(self) -> None:
+        import tomllib
+
+        board = tomllib.loads((ROOT / "board.toml").read_text(encoding="utf-8"))
+        self.assertNotIn("build-arm-driver.py NativeUfs", board["kernel"]["archives"])
 
     def test_kernel_stub_builder_resolves_local_and_staged_package_layouts(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -81,11 +79,22 @@ class Nx721jDefconfigTests(unittest.TestCase):
             staged_source.touch()
             self.assertEqual(STUB_MODULE.resolve_source(root), staged_source)
 
-    def test_workflow_applies_the_pinned_native_ufs_delta(self) -> None:
+    def test_workflow_uses_pinned_official_xnu_without_native_ufs_mutation(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn("prepare-nx721j-native-ufs.py --unixnu", workflow)
         self.assertGreaterEqual(workflow.count(PINNED_UNIXNU), 2)
         self.assertNotIn("unixnu_ref || 'main'", workflow)
+        self.assertNotIn("prepare-nx721j-native-ufs.py", workflow)
+        self.assertNotIn("IOStorageFamily", workflow)
+
+    def test_payload_workflow_patches_only_a_copy_and_passes_no_ufs_args(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "macos-nx721j-payload.yml").read_text(encoding="utf-8")
+        self.assertIn("cp \"$KERNEL_PATH\" out/nx721j/kernel.entry-probe.macho", workflow)
+        self.assertIn("scripts/patch-xnu-entry-probe.py", workflow)
+        self.assertIn("--reset-delay 6", workflow)
+        self.assertNotIn("--panic-screen", workflow)
+        self.assertNotIn("native-ufs-target=nx721j", workflow)
+        self.assertNotIn("native-ufs-probe=2", workflow)
+        self.assertNotIn("native-ufs-root=1", workflow)
 
 
 if __name__ == "__main__":

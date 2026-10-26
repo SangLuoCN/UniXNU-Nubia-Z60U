@@ -48,12 +48,16 @@ def main() -> int:
         "build-corecrypto-14.py --namespace",
         "build-arm-driver.py ArmDTPlatform",
         "build-arm-driver.py ArmCpu",
-        "build-arm-driver.py NativeUfs",
         "build-nx721j-kernel-stubs.py",
         "build-libpthread-kernel.py",
     }
     if not required.issubset(archives):
         return fail("kernel archive list is incomplete")
+    if "build-arm-driver.py NativeUfs" in archives:
+        return fail("first-entry kernel must not link the unqualified NativeUfs component")
+    defconfig = ROOT / "configs" / "nx721j_probe_defconfig"
+    if not defconfig.is_file() or "CONFIG_XNU_NATIVE_UFS=n" not in defconfig.read_text(encoding="utf-8"):
+        return fail("first-entry defconfig must disable NativeUfs")
     print("PASS: NX721J kernel-only board boundary")
     return 0
 
